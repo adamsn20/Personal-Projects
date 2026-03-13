@@ -4,3 +4,4 @@ matplotlib
 streamlit>=1.22.0
 seaborn
 scipy
+plotly
