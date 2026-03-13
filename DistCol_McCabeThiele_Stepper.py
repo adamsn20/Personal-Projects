@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from scipy.interpolate import interp1d
+from scipy.optimize import root_scalar
 
 st.set_page_config(page_title="McCabe-Thiele Auto-Stepper", layout="wide")
 
@@ -99,12 +100,36 @@ def main():
 
     elif spec_method == "Multiple of Minimum Reflux":
         r_mult = st.sidebar.slider("R / R_min Multiplier", 1.01, 3.0, 1.2, 0.05)
-        st.sidebar.info("Code will calculate R_min from the VLE pinch point, then multiply by this factor.")
-        # Add calculation logic here:
-        # 1. Find intersection of q-line and f_y_vle
-        # 2. Calculate minimum slope (m_min) from xD to that intersection
-        # 3. Calculate R_min = m_min / (1 - m_min)
-        # 4. R = r_mult * R_min
+        
+        # 1. Define a function for the difference between VLE and q-line
+        def q_line_diff(x):
+            y_vle = f_y_vle(x)
+            if abs(q - 1.0) < 1e-5: # Saturated liquid
+                return x - zF
+            else:
+                m_q = q / (q - 1)
+                b_q = -zF / (q - 1)
+                y_q = m_q * x + b_q
+                return y_vle - y_q
+
+        # 2. Find the pinch point (intersection of q-line and VLE)
+        try:
+            # We search for the intersection between xB and xD
+            res = root_scalar(q_line_diff, bracket=[xB, xD], method='brentq')
+            x_pinch = res.root
+            y_pinch = float(f_y_vle(x_pinch))
+            
+            # 3. Calculate minimum slope and R_min
+            m_min = (xD - y_pinch) / (xD - x_pinch)
+            R_min = m_min / (1 - m_min)
+            
+            # 4. Calculate actual R
+            R = r_mult * R_min
+            st.sidebar.success(f"Calculated R_min: {R_min:.2f}  |  Actual R: {R:.2f}")
+            
+        except ValueError:
+            st.sidebar.error("Could not find a valid pinch point. Check zF and q values.")
+            R = 2.0 # Fallback value so the app doesn't crash completely
 
     elif spec_method == "Known Boilup Ratio (Vb)":
         Vb = st.sidebar.slider("Boilup Ratio (Vb)", 0.1, 10.0, 2.0, 0.1)
