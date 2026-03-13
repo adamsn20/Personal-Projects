@@ -78,6 +78,15 @@ def main():
         st.warning("Please provide valid VLE data to proceed.")
         return
 
+    # --- CREATE INTERPOLATION FUNCTIONS EARLY ---
+    # Moved this up so the Multiple of Minimum Reflux logic can use it!
+    try:
+        f_y_vle = interp1d(x_data, y_data, kind='cubic', fill_value="extrapolate")
+        f_x_vle = interp1d(y_data, x_data, kind='cubic', fill_value="extrapolate")
+    except ValueError:
+        st.error("VLE data is not strictly increasing. Please check your inputs.")
+        return
+
     # --- SIDEBAR: OPERATING CONDITIONS ---
     st.sidebar.header("2. Operating Conditions")
     
@@ -96,7 +105,6 @@ def main():
     # Conditionally show sliders based on the chosen method
     if spec_method == "Known Reflux Ratio (R)":
         R = st.sidebar.slider("Reflux Ratio (R)", 0.1, 10.0, 2.0, 0.1)
-        # Proceed with standard rectifying line calculation...
 
     elif spec_method == "Multiple of Minimum Reflux":
         r_mult = st.sidebar.slider("R / R_min Multiplier", 1.01, 3.0, 1.2, 0.05)
@@ -114,7 +122,6 @@ def main():
 
         # 2. Find the pinch point (intersection of q-line and VLE)
         try:
-            # We search for the intersection between xB and xD
             res = root_scalar(q_line_diff, bracket=[xB, xD], method='brentq')
             x_pinch = res.root
             y_pinch = float(f_y_vle(x_pinch))
@@ -129,24 +136,31 @@ def main():
             
         except ValueError:
             st.sidebar.error("Could not find a valid pinch point. Check zF and q values.")
-            R = 2.0 # Fallback value so the app doesn't crash completely
+            R = 2.0 # Fallback
 
     elif spec_method == "Known Boilup Ratio (Vb)":
         Vb = st.sidebar.slider("Boilup Ratio (Vb)", 0.1, 10.0, 2.0, 0.1)
-        # Add calculation logic here:
+        
         # 1. Calculate stripping line slope: m_S = (Vb + 1) / Vb
+        m_S_temp = (Vb + 1) / Vb
+        b_S_temp = xB - m_S_temp * xB
+        
         # 2. Find intersection of stripping line and q-line
-        # 3. Calculate rectifying line from xD to that intersection
+        if abs(q - 1.0) < 1e-5:
+            x_int_temp = zF
+            y_int_temp = m_S_temp * x_int_temp + b_S_temp
+        else:
+            m_q = q / (q - 1)
+            b_q = -zF / (q - 1)
+            x_int_temp = (b_q - b_S_temp) / (m_S_temp - m_q)
+            y_int_temp = m_q * x_int_temp + b_q
+            
+        # 3. Back-calculate R so the rest of the code flows normally
+        m_R_temp = (xD - y_int_temp) / (xD - x_int_temp)
+        R = m_R_temp / (1 - m_R_temp)
+        st.sidebar.success(f"Equivalent Reflux Ratio (R): {R:.2f}")
 
     # --- CALCULATIONS ---
-    # Interpolation functions for VLE curve
-    try:
-        f_y_vle = interp1d(x_data, y_data, kind='cubic', fill_value="extrapolate")
-        f_x_vle = interp1d(y_data, x_data, kind='cubic', fill_value="extrapolate")
-    except ValueError:
-        st.error("VLE data is not strictly increasing. Please check your inputs.")
-        return
-
     # Rectifying line: y = (R/(R+1))x + xD/(R+1)
     m_R = R / (R + 1)
     b_R = xD / (R + 1)
@@ -178,14 +192,13 @@ def main():
     current_y = xD
     stage_count = 0
 
-    while current_x > xB and stage_count < 50: # Cap at 50 stages to prevent infinite loops
+    while current_x > xB and stage_count < 50:
         # Step horizontal to VLE curve
         next_x = float(f_x_vle(current_y))
         stages_x.append(next_x)
         stages_y.append(current_y)
         
         if next_x < xB:
-            # We've crossed the bottoms target, finish the last step visually
             stages_x.append(next_x)
             stages_y.append(next_x)
             stage_count += 1
@@ -213,7 +226,6 @@ def main():
     fig.add_trace(go.Scatter(x=[x_int, xB], y=[y_int, xB], mode='lines', name='Stripping Line', line=dict(color='red')))
     
     # q-line
-    # Determine where q-line hits y=x
     fig.add_trace(go.Scatter(x=[zF, x_int], y=[zF, y_int], mode='lines', name='q-line', line=dict(color='purple', dash='dot')))
 
     # Stages
@@ -229,7 +241,8 @@ def main():
         hovermode="closest"
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    # Fixed the Streamlit warning here
+    st.plotly_chart(fig, width='stretch')
     
     st.success(f"Theoretical Stages Required: {stage_count}")
 
