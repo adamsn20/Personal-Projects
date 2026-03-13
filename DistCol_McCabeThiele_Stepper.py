@@ -79,11 +79,39 @@ def main():
 
     # --- SIDEBAR: OPERATING CONDITIONS ---
     st.sidebar.header("2. Operating Conditions")
+    
+    # Base parameters required for all methods
     xD = st.sidebar.slider("Distillate Purity (xD)", 0.50, 0.99, 0.95, 0.01)
     xB = st.sidebar.slider("Bottoms Purity (xB)", 0.01, 0.50, 0.05, 0.01)
     zF = st.sidebar.slider("Feed Composition (zF)", xB + 0.01, xD - 0.01, 0.50, 0.01)
-    R = st.sidebar.slider("Reflux Ratio (R)", 0.1, 10.0, 2.0, 0.1)
     q = st.sidebar.slider("Feed Quality (q)", -0.5, 1.5, 1.0, 0.1)
+
+    # Let the user choose what defines their column's internal flows
+    spec_method = st.sidebar.selectbox(
+        "Column Specification Method:",
+        ["Known Reflux Ratio (R)", "Multiple of Minimum Reflux", "Known Boilup Ratio (Vb)"]
+    )
+
+    # Conditionally show sliders based on the chosen method
+    if spec_method == "Known Reflux Ratio (R)":
+        R = st.sidebar.slider("Reflux Ratio (R)", 0.1, 10.0, 2.0, 0.1)
+        # Proceed with standard rectifying line calculation...
+
+    elif spec_method == "Multiple of Minimum Reflux":
+        r_mult = st.sidebar.slider("R / R_min Multiplier", 1.01, 3.0, 1.2, 0.05)
+        st.sidebar.info("Code will calculate R_min from the VLE pinch point, then multiply by this factor.")
+        # Add calculation logic here:
+        # 1. Find intersection of q-line and f_y_vle
+        # 2. Calculate minimum slope (m_min) from xD to that intersection
+        # 3. Calculate R_min = m_min / (1 - m_min)
+        # 4. R = r_mult * R_min
+
+    elif spec_method == "Known Boilup Ratio (Vb)":
+        Vb = st.sidebar.slider("Boilup Ratio (Vb)", 0.1, 10.0, 2.0, 0.1)
+        # Add calculation logic here:
+        # 1. Calculate stripping line slope: m_S = (Vb + 1) / Vb
+        # 2. Find intersection of stripping line and q-line
+        # 3. Calculate rectifying line from xD to that intersection
 
     # --- CALCULATIONS ---
     # Interpolation functions for VLE curve
