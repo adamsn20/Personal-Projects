@@ -6,8 +6,8 @@ from fpdf import FPDF
 
 st.set_page_config(page_title="Python or Jupyter Notebook to PDF Converter", page_icon="📄")
 
-st.title("Batch Python & Jupyter to PDF Converter")
-st.write("Upload multiple `.py` or `.ipynb` files to convert them into formatted PDFs.")
+st.title("Python & Jupyter to PDF Converter")
+st.write("Upload `.py` or `.ipynb` files to convert them into formatted PDFs.")
 
 # --- 1. Initialize Session State ---
 # This creates a dictionary in memory to hold our converted files
