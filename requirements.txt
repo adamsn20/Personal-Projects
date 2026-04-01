@@ -5,3 +5,7 @@ streamlit>=1.22.0
 seaborn
 scipy
 plotly
+
+jupyter==1.0.0
+nbconvert==7.16.2
+fpdf2==2.7.8
