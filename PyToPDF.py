@@ -6,10 +6,10 @@ import zipfile
 import io
 from fpdf import FPDF
 
-st.set_page_config(page_title="Batch Code to PDF Converter", page_icon="📄")
+st.set_page_config(page_title="Python & Jupyter Notebook to PDF Converter", page_icon="📄")
 
-st.title("Batch Python & Jupyter to PDF Converter")
-st.write("Upload multiple `.py` or `.ipynb` files to convert them into formatted PDFs.")
+st.title("Python & Jupyter Notebook to PDF Converter")
+st.write("Upload `.py` or `.ipynb` files to convert them into formatted PDFs.")
 
 # --- 1. Initialize Session State ---
 if "pdf_outputs" not in st.session_state:
