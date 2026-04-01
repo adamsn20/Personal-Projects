@@ -4,49 +4,54 @@ import os
 import tempfile
 from fpdf import FPDF
 
-st.set_page_config(page_title="Code to PDF Converter", page_icon="📄")
+st.set_page_config(page_title="Batch Code to PDF Converter", page_icon="📄")
 
-st.title("Python & Jupyter to PDF Converter")
-st.write("Upload a `.py` or `.ipynb` file to convert it into a formatted PDF.")
+st.title("Batch Python & Jupyter to PDF Converter")
+st.write("Upload multiple `.py` or `.ipynb` files to convert them into formatted PDFs.")
 
-uploaded_file = st.file_uploader("Choose a file", type=["py", "ipynb"])
+# Enable multiple file uploads
+uploaded_files = st.file_uploader("Choose files", type=["py", "ipynb"], accept_multiple_files=True)
 
-if uploaded_file is not None:
-    # Determine the file type
-    file_ext = uploaded_file.name.split('.')[-1]
+# Check if the list of uploaded files is not empty
+if uploaded_files:
     
-    # Use a temporary directory to avoid cluttering the server
+    # Initialize the progress bar and a placeholder for status text
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
+    # Create a single temporary directory for the entire batch
     with tempfile.TemporaryDirectory() as temp_dir:
-        temp_input_path = os.path.join(temp_dir, uploaded_file.name)
         
-        # Save the uploaded file to the temp directory
-        with open(temp_input_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
+        # Loop through the list of uploaded files
+        for i, uploaded_file in enumerate(uploaded_files):
             
-        output_pdf_name = uploaded_file.name.replace(f".{file_ext}", ".pdf")
-        output_pdf_path = os.path.join(temp_dir, output_pdf_name)
-        
-        # --- Handle Python Files ---
-        if file_ext == "py":
-            with st.spinner("Converting Python script to PDF..."):
+            # Update the status text so the user knows which file is processing
+            status_text.text(f"Processing {uploaded_file.name} ({i+1} of {len(uploaded_files)})...")
+            
+            file_ext = uploaded_file.name.split('.')[-1]
+            temp_input_path = os.path.join(temp_dir, uploaded_file.name)
+            
+            # Save the current uploaded file
+            with open(temp_input_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+                
+            output_pdf_name = uploaded_file.name.replace(f".{file_ext}", ".pdf")
+            output_pdf_path = os.path.join(temp_dir, output_pdf_name)
+            
+            # --- Handle Python Files ---
+            if file_ext == "py":
                 pdf = FPDF()
                 pdf.add_page()
                 pdf.set_font("Courier", size=10)
-                
-                # Read the python file and write it to the PDF
                 with open(temp_input_path, "r", encoding="utf-8") as f:
                     for line in f:
-                        # Clean up text encoding to prevent FPDF errors
                         clean_line = line.encode('latin-1', 'replace').decode('latin-1')
                         pdf.cell(0, 5, txt=clean_line, ln=True)
-                        
                 pdf.output(output_pdf_path)
-            
-        # --- Handle Jupyter Notebooks ---
-        elif file_ext == "ipynb":
-            with st.spinner("Compiling notebook to PDF (this may take a moment)..."):
+                
+            # --- Handle Jupyter Notebooks ---
+            elif file_ext == "ipynb":
                 try:
-                    # Run the jupyter nbconvert command line tool
                     subprocess.run([
                         "jupyter", "nbconvert", 
                         "--to", "pdf", 
@@ -55,17 +60,23 @@ if uploaded_file is not None:
                         "--output", output_pdf_name.replace('.pdf', '')
                     ], check=True, capture_output=True, text=True)
                 except subprocess.CalledProcessError as e:
-                    st.error("Conversion failed. There might be an issue with the notebook's syntax or missing system dependencies.")
+                    st.error(f"Failed to convert {uploaded_file.name}. There may be syntax errors.")
                     st.error(f"Error Log: {e.stderr}")
-                    st.stop()
-        
-        # --- Display Download Button ---
-        if os.path.exists(output_pdf_path):
-            st.success("Conversion successful!")
-            with open(output_pdf_path, "rb") as f:
-                st.download_button(
-                    label="Download PDF",
-                    data=f,
-                    file_name=output_pdf_name,
-                    mime="application/pdf"
-                )
+                    continue # Skip to the next file in the loop if this one fails
+            
+            # --- Display Individual Download Button ---
+            if os.path.exists(output_pdf_path):
+                with open(output_pdf_path, "rb") as f:
+                    st.download_button(
+                        label=f"Download {output_pdf_name}",
+                        data=f,
+                        file_name=output_pdf_name,
+                        mime="application/pdf",
+                        key=f"download_{i}" # The unique key prevents Streamlit duplicate widget errors
+                    )
+            
+            # Update the progress bar dynamically
+            progress_bar.progress((i + 1) / len(uploaded_files))
+            
+        # Final success message once the loop finishes
+        status_text.success("All files processed successfully!")
