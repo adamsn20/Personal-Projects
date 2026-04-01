@@ -2,15 +2,16 @@ import streamlit as st
 import subprocess
 import os
 import tempfile
+import zipfile
+import io
 from fpdf import FPDF
 
-st.set_page_config(page_title="Python or Jupyter Notebook to PDF Converter", page_icon="📄")
+st.set_page_config(page_title="Batch Code to PDF Converter", page_icon="📄")
 
-st.title("Python & Jupyter to PDF Converter")
-st.write("Upload `.py` or `.ipynb` files to convert them into formatted PDFs.")
+st.title("Batch Python & Jupyter to PDF Converter")
+st.write("Upload multiple `.py` or `.ipynb` files to convert them into formatted PDFs.")
 
 # --- 1. Initialize Session State ---
-# This creates a dictionary in memory to hold our converted files
 if "pdf_outputs" not in st.session_state:
     st.session_state.pdf_outputs = {}
 
@@ -18,12 +19,8 @@ uploaded_files = st.file_uploader("Choose files", type=["py", "ipynb"], accept_m
 
 if uploaded_files:
     # --- 2. The Action Button ---
-    # The code inside this block ONLY runs when the button is actively clicked
     if st.button("Convert Files"):
-        
-        # Clear out any old conversions from previous runs
         st.session_state.pdf_outputs = {} 
-        
         progress_bar = st.progress(0)
         status_text = st.empty()
         
@@ -66,8 +63,7 @@ if uploaded_files:
                         st.error(f"Error Log: {e.stderr}")
                         continue 
                 
-                # --- 3. Save to Memory Instead of Immediate Download ---
-                # Read the generated PDF and store its raw bytes in session state
+                # --- 3. Save to Memory ---
                 if os.path.exists(output_pdf_path):
                     with open(output_pdf_path, "rb") as f:
                         st.session_state.pdf_outputs[output_pdf_name] = f.read()
@@ -76,16 +72,34 @@ if uploaded_files:
                 
             status_text.success("All files processed successfully!")
 
-# --- 4. Render Download Buttons Independently ---
-# This block runs every time the app refreshes, looking at what is saved in memory.
-# Because it is outside the "Convert Files" button logic, downloading won't trigger a reconversion.
+# --- 4. Render Download Buttons ---
 if st.session_state.pdf_outputs:
     st.divider()
     st.subheader("Your PDFs are ready:")
     
+    # Create an in-memory ZIP file
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        for pdf_name, pdf_bytes in st.session_state.pdf_outputs.items():
+            # Write each PDF from session state into the zip archive
+            zip_file.writestr(pdf_name, pdf_bytes)
+    
+    # --- The "Download All" Button ---
+    # We place this at the top so it's easy to find
+    st.download_button(
+        label="📦 Download All (ZIP)",
+        data=zip_buffer.getvalue(),
+        file_name="converted_pdfs.zip",
+        mime="application/zip",
+        type="primary" # Makes the button stand out visually
+    )
+    
+    st.write("Or download individually:")
+    
+    # --- The Individual Download Buttons ---
     for pdf_name, pdf_bytes in st.session_state.pdf_outputs.items():
         st.download_button(
-            label=f"Download {pdf_name}",
+            label=f"📄 Download {pdf_name}",
             data=pdf_bytes,
             file_name=pdf_name,
             mime="application/pdf",
