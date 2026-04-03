@@ -105,3 +105,39 @@ if st.session_state.pdf_outputs:
             mime="application/pdf",
             key=f"dl_{pdf_name}" 
         )
+
+# --- 5. About the App (Informational Section) ---
+st.divider() # Creates a clean visual break from the functional UI
+
+st.header("ℹ️ About This App")
+st.write(
+    "This tool is designed to turn your raw code and notebooks into polished, readable PDF documents. "
+    "Under the hood, it uses standard text rendering for Python scripts and a robust LaTeX engine to perfectly "
+    "typeset Jupyter Notebooks—preserving your code blocks, markdown cells, and visual outputs."
+)
+
+st.write("### How It Works")
+
+# Create three equal-width columns for our "graphic"
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.subheader("📤 1. Upload")
+    st.write(
+        "Use the file uploader at the top of the page to browse your computer or drag-and-drop "
+        "your files. You can upload a mix of both `.py` and `.ipynb` files at the exact same time."
+    )
+
+with col2:
+    st.subheader("⚙️ 2. Convert")
+    st.write(
+        "Click the **Convert Files** button. The app spins up a secure, temporary directory on the server "
+        "to process your batch. Python files are written line-by-line, while notebooks are compiled via `nbconvert`."
+    )
+
+with col3:
+    st.subheader("📥 3. Download")
+    st.write(
+        "Once the progress bar finishes, your files are saved into your browser's memory. Download them "
+        "individually to check them over, or grab the entire batch at once in a convenient `.zip` archive."
+    )
