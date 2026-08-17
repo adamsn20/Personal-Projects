@@ -32,17 +32,6 @@ st.markdown(
         padding: 1.2rem;
         margin-bottom: 1rem;
     }
-    .badge {
-        display: inline-block;
-        padding: 0.35rem 0.75rem;
-        border-radius: 6px;
-        font-weight: 600;
-        margin-bottom: 0.25rem;
-    }
-    .badge-ascension { background-color: #457B9D; color: white; }
-    .badge-character { background-color: #2A9D8F; color: white; }
-    .badge-pos { background-color: #388E3C; color: white; }
-    .badge-neg { background-color: #D32F2F; color: white; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -170,13 +159,19 @@ with col1:
     )
 
     st.markdown("### 👥 Character Randomization")
-    selected_char_pool = st.multiselect(
-        "Available Characters",
-        options=ALL_CHARACTERS,
-        default=ALL_CHARACTERS,
-        help="Choose which characters are allowed in the randomized roster.",
-    )
+    st.markdown("**Available Characters**", help="Check/uncheck to include or exclude characters from the randomization pool.")
+    
+    # Use sub-columns to neatly display the checkboxes side-by-side
+    char_col_1, char_col_2 = st.columns(2)
+    selected_char_pool = []
+    
+    for idx, char in enumerate(ALL_CHARACTERS):
+        # Alternate between the two columns
+        target_col = char_col_1 if idx % 2 == 0 else char_col_2
+        if target_col.checkbox(char, value=True, key=f"checkbox_{char}"):
+            selected_char_pool.append(char)
 
+    st.write("") # small spacing
     num_characters = st.number_input(
         "Number of Characters (for Co-op / Multiplayer)",
         min_value=1,
