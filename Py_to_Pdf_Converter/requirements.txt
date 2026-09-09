@@ -3,7 +3,6 @@ pandas
 matplotlib
 streamlit>=1.22.0
 seaborn
-scipy
 
 jupyter==1.0.0
 nbconvert==7.16.2
