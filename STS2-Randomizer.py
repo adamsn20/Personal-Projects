@@ -12,6 +12,8 @@ st.set_page_config(
 st.markdown(
     """
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap');
+    
     .main-title {
         font-family: 'Cinzel', 'Trajan Pro', serif;
         font-weight: 700;
@@ -69,8 +71,6 @@ NEGATIVE_MODIFIERS = [
 ]
 
 # --- Helper Functions ---
-
-
 def generate_positive_modifiers(count: int) -> list[str]:
     """Randomly selects positive modifiers ensuring at most 1 starter modifier."""
     if count == 0:
@@ -99,7 +99,6 @@ def generate_positive_modifiers(count: int) -> list[str]:
     random.shuffle(selected)
     return selected
 
-
 def reroll_positive_modifier(
     current_list: list[str], index_to_reroll: int
 ) -> list[str]:
@@ -122,7 +121,6 @@ def reroll_positive_modifier(
     if candidates:
         current_list[index_to_reroll] = random.choice(candidates)
     return current_list
-
 
 # --- Session State Initialization ---
 if "run_generated" not in st.session_state:
